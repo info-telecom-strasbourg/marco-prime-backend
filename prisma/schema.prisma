@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Member {
+  id          BigInt    @id @default(autoincrement())
+  lastName    String    @map("last_name") @db.VarChar(100)
+  firstName   String    @map("first_name") @db.VarChar(100)
+  cardNumber  BigInt    @unique @map("card_number")
+  email       String    @unique @db.VarChar(255)
+  phone       String?   @db.VarChar(20)
+  balance     Decimal   @default(0.00) @db.Decimal(10, 2)
+  admin       Boolean   @default(false)
+  contributor Boolean   @default(false)
+  birthDate   DateTime? @map("birth_date") @db.Date
+  sector      String?   @db.VarChar(100)
+  class       Int?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  orders Order[]
+
+  @@index([cardNumber])
+  @@index([email])
+  @@map("members")
+}
+
+model ProductType {
+  id   BigInt @id @default(autoincrement())
+  type String @unique @db.VarChar(50)
+
+  products Product[]
+
+  @@map("product_types")
+}
+
+model Product {
+  id          BigInt  @id @default(autoincrement())
+  name        String  @db.VarChar(100)
+  title       String  @db.VarChar(255)
+  price       Decimal @db.Decimal(10, 2)
+  productType BigInt  @map("product_type")
+  color       String? @db.VarChar(50)
+  available   Boolean @default(true)
+
+  type   ProductType @relation(fields: [productType], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orders Order[]
+
+  @@index([productType])
+  @@index([available])
+  @@map("products")
+}
+
+model Order {
+  id        BigInt   @id @default(autoincrement())
+  productId BigInt?  @map("product_id")
+  memberId  BigInt   @map("member_id")
+  price     Decimal  @db.Decimal(10, 2)
+  amount    Int      @default(1)
+  date      DateTime @default(now())
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  member  Member   @relation(fields: [memberId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([memberId])
+  @@index([productId])
+  @@index([date])
+  @@map("orders")
+}
