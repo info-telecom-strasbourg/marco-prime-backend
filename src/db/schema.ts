@@ -10,7 +10,7 @@ export const members = t.mysqlTable("members", {
   lastName: t.varchar("last_name", { length: 50 }).notNull(),
   firstName: t.varchar("first_name", { length: 50 }).notNull(),
   cardNumber: t.bigint("card_number", { mode: "number" }),
-  email: t.varchar("email", { length: 50 }).notNull(),
+  email: t.varchar("email", { length: 255 }).notNull(),
   phone: t.varchar("phone", { length: 50 }),
   balance: t
     .decimal("balance", { precision: 10, scale: 2 })
