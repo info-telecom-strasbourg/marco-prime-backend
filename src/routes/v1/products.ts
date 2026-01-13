@@ -4,13 +4,14 @@ import { db } from "../../db/index.js";
 import { products } from "../../db/schema.js";
 import { productSchema } from "../../validators/products.validator.js";
 
-const router = new Hono();
+const productsRouter = new Hono();
 
 const productsResponseSchema = z.array(productSchema);
 
-router.get("/", async (c) => {
+productsRouter.get("/", async (c) => {
   const allProducts = await db
     .select({
+      id: products.id,
       title: products.title,
       name: products.name,
       color: products.color,
@@ -25,4 +26,4 @@ router.get("/", async (c) => {
   return c.json(validatedProducts);
 });
 
-export default router;
+export { productsRouter };

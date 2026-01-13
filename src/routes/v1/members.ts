@@ -8,7 +8,7 @@ import {
   memberSchema,
 } from "../../validators/members.validator.js";
 
-const router = new Hono();
+const membersRouter = new Hono();
 
 const membersResponseSchema = memberSchema.pick({
   id: true,
@@ -19,7 +19,7 @@ const membersResponseSchema = memberSchema.pick({
   admin: true,
 });
 
-router.get(
+membersRouter.get(
   "/:card_number",
   zValidator("param", cardNumberParamSchema),
   async (c) => {
@@ -48,4 +48,4 @@ router.get(
   },
 );
 
-export default router;
+export { membersRouter };
