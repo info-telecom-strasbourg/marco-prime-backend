@@ -4,16 +4,26 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "db:pull": "drizzle-kit pull",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.8",
-    "@prisma/extension-accelerate": "^3.0.1",
-    "hono": "^4.11.3"
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.1",
+    "drizzle-seed": "^0.3.1",
+    "hono": "^4.11.3",
+    "mysql2": "^3.16.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
-    "prisma": "^7.2.0",
+    "@types/pg": "^8.16.0",
+    "drizzle-kit": "^0.31.8",
     "tsx": "^4.7.1",
     "typescript": "^5.8.3"
   }
