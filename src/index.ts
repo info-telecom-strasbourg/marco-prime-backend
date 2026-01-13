@@ -1,11 +1,14 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import v1Router from "./routes/v1/index.js";
 
 const app = new Hono();
 
 app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
+
+app.route("/api/v1", v1Router);
 
 serve(
   {
