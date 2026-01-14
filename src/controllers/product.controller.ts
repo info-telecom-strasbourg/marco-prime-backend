@@ -4,7 +4,13 @@ import { products } from "../db/schema.js";
 
 export class ProductController {
   async getAllProducts(c: Context) {
-    const allProducts = await db
+    const allProducts = await this.fetchAllProducts();
+
+    return c.json(allProducts);
+  }
+
+  private async fetchAllProducts() {
+    return await db
       .select({
         id: products.id,
         title: products.title,
@@ -15,7 +21,5 @@ export class ProductController {
         available: products.available,
       })
       .from(products);
-
-    return c.json(allProducts);
   }
 }

@@ -1,13 +1,13 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { router } from "./config/router.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
-import v1Router from "./routes/v1/index.js";
 
 const app = new Hono();
 
 app.onError(errorHandler);
 
-app.route("/api/v1", v1Router);
+app.route("/api/v1", router);
 
 serve(
   {
