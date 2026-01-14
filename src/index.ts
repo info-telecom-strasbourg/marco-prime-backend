@@ -1,7 +1,9 @@
 import { serve } from "@hono/node-server";
+import { swaggerUI } from "@hono/swagger-ui";
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { customLogger } from "./config/logger.js";
+import { openApiSpec } from "./config/openapi.js";
 import { router } from "./config/router.js";
 import { authMiddleware } from "./middlewares/auth.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
@@ -11,11 +13,14 @@ export const app = new Hono()
   .onError(errorHandler)
   .use("*", logger(customLogger))
   .use("*", limiter)
-  .get("/api/v1/health", (c) =>
+  .get("/", (c) => c.redirect("/ui"))
+  .get("/health", (c) =>
     c.json({
       status: "ok",
     }),
   )
+  .get("/doc", (c) => c.json(openApiSpec))
+  .get("/ui", swaggerUI({ url: "/doc" }))
   .use("*", authMiddleware)
   .route("/api/v1", router);
 

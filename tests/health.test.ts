@@ -7,7 +7,7 @@ describe("Health Endpoint", () => {
   const client = testClient(app);
 
   it("should return 200 OK with status", async () => {
-    const res = await client.api.v1.health.$get({}, authenticatedOptions);
+    const res = await client.health.$get({}, authenticatedOptions);
     expect(res.status).toBe(200);
 
     const data = await res.json();
@@ -15,7 +15,7 @@ describe("Health Endpoint", () => {
   });
 
   it("should work without authentication", async () => {
-    const res = await client.api.v1.health.$get();
+    const res = await client.health.$get();
     expect(res.status).toBe(200);
   });
 });
