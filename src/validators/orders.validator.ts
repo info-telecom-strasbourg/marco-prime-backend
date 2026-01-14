@@ -10,8 +10,20 @@ export const orderSchema = z.object({
 });
 
 export const paginationQuerySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).optional().default(1),
-  limit: z.string().regex(/^\d+$/).transform(Number).optional().default(20),
+  page: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .refine((val) => val >= 1, { message: "Page must be >= 1" })
+    .optional()
+    .default(1),
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .refine((val) => val >= 1, { message: "Limit must be >= 1" })
+    .optional()
+    .default(20),
 });
 
 export const paginatedResponseSchema = z.object({

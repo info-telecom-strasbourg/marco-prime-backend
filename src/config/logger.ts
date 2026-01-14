@@ -1,6 +1,6 @@
-import { createStream } from "rotating-file-stream";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { createStream } from "rotating-file-stream";
 
 // Create logs directory if it doesn't exist
 const logsDir = join(process.cwd(), "logs");
@@ -20,6 +20,7 @@ const logStream = createStream("app.log", {
 // Custom print function for Hono logger
 // Writes to both console and rotating file
 export function customLogger(message: string, ...rest: string[]) {
+  if (process.env.NODE_ENV === "test") return;
   // Log to console (colorized output from Hono)
   console.log(message, ...rest);
 

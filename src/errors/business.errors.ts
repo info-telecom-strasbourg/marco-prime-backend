@@ -1,4 +1,4 @@
-import { BadRequestError } from "./http.errors.js";
+import { BadRequestError, ForbiddenError } from "./http.errors.js";
 
 export class InsufficientBalanceError extends BadRequestError {
   constructor(
@@ -23,7 +23,7 @@ export class ProductUnavailableError extends BadRequestError {
   }
 }
 
-export class AdminAuthorizationError extends BadRequestError {
+export class AdminAuthorizationError extends ForbiddenError {
   constructor(
     message: string = "Admin card number required for non-admin member recharge",
   ) {

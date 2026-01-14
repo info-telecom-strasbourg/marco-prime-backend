@@ -10,41 +10,27 @@ import { paginationQuerySchema } from "../validators/orders.validator.js";
 import { purchaseRequestSchema } from "../validators/purchase.validator.js";
 import { rechargeRequestSchema } from "../validators/recharge.validator.js";
 
-const router = new Hono();
-
-// Initialize controllers
 const memberController = new MemberController();
 const productController = new ProductController();
 const orderController = new OrderController();
 const purchaseController = new PurchaseController();
 const rechargeController = new RechargeController();
 
-// Health endpoint (not protected by auth)
-router.get("/health", (c) =>
-  c.json({
-    status: "ok",
-  }),
-);
-
-// Define routes
-router.get(
-  "/member/:card_number",
-  zValidator("param", cardNumberParamSchema),
-  (c) => memberController.getMemberByCardNumber(c),
-);
-
-router.get("/products", (c) => productController.getAllProducts(c));
-
-router.get("/history", zValidator("query", paginationQuerySchema), (c) =>
-  orderController.getOrdersHistory(c),
-);
-
-router.post("/purchase", zValidator("json", purchaseRequestSchema), (c) =>
-  purchaseController.createPurchase(c),
-);
-
-router.post("/recharge", zValidator("json", rechargeRequestSchema), (c) =>
-  rechargeController.createRecharge(c),
-);
+const router = new Hono()
+  .get(
+    "/member/:card_number",
+    zValidator("param", cardNumberParamSchema),
+    (c) => memberController.getMemberByCardNumber(c),
+  )
+  .get("/products", (c) => productController.getAllProducts(c))
+  .get("/history", zValidator("query", paginationQuerySchema), (c) =>
+    orderController.getOrdersHistory(c),
+  )
+  .post("/purchase", zValidator("json", purchaseRequestSchema), (c) =>
+    purchaseController.createPurchase(c),
+  )
+  .post("/recharge", zValidator("json", rechargeRequestSchema), (c) =>
+    rechargeController.createRecharge(c),
+  );
 
 export { router };
