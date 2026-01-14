@@ -5,7 +5,6 @@ import { OrderController } from "../controllers/order.controller.js";
 import { ProductController } from "../controllers/product.controller.js";
 import { PurchaseController } from "../controllers/purchase.controller.js";
 import { RechargeController } from "../controllers/recharge.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { cardNumberParamSchema } from "../validators/members.validator.js";
 import { paginationQuerySchema } from "../validators/orders.validator.js";
 import { purchaseRequestSchema } from "../validators/purchase.validator.js";
@@ -19,9 +18,6 @@ const productController = new ProductController();
 const orderController = new OrderController();
 const purchaseController = new PurchaseController();
 const rechargeController = new RechargeController();
-
-// Apply auth middleware to all other routes
-router.use("*", authMiddleware);
 
 // Health endpoint (not protected by auth)
 router.get("/health", (c) =>
