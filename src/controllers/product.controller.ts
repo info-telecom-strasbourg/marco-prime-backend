@@ -1,25 +1,11 @@
 import type { Context } from "hono";
-import { db } from "../config/database.js";
-import { products } from "../db/schema.js";
+import { ProductRepository } from "../repositories/product.repository.js";
 
 export class ProductController {
+  private productRepository = new ProductRepository();
+
   async getAllProducts(c: Context) {
-    const allProducts = await this.fetchAllProducts();
-
+    const allProducts = await this.productRepository.findAll();
     return c.json(allProducts);
-  }
-
-  private async fetchAllProducts() {
-    return await db
-      .select({
-        id: products.id,
-        title: products.title,
-        name: products.name,
-        color: products.color,
-        price: products.price,
-        productTypeId: products.productTypeId,
-        available: products.available,
-      })
-      .from(products);
   }
 }

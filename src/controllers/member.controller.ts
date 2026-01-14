@@ -1,46 +1,25 @@
 import type { Context } from "hono";
 import type { z } from "zod";
 import { HTTPException } from "hono/http-exception";
-import { eq } from "drizzle-orm";
-import { db } from "../config/database.js";
-import { members } from "../db/schema.js";
+import { MemberRepository } from "../repositories/member.repository.js";
 import { cardNumberParamSchema } from "../validators/members.validator.js";
 
 type MemberParamRequest = z.infer<typeof cardNumberParamSchema>;
 
 export class MemberController {
+  private memberRepository = new MemberRepository();
+
   async getMemberByCardNumber(c: Context) {
-    const { card_number } = this.getValidatedParams<MemberParamRequest>(c);
+    const { card_number } = c.req.valid("param" as never) as MemberParamRequest;
 
-    const member = await this.findMemberByCardNumber(card_number);
-
-    return c.json(member);
-  }
-
-  private getValidatedParams<T>(c: Context): T {
-    return c.req.valid("param" as never) as T;
-  }
-
-  private async findMemberByCardNumber(cardNumber: number) {
-    const [member] = await db
-      .select({
-        id: members.id,
-        lastName: members.lastName,
-        firstName: members.firstName,
-        cardNumber: members.cardNumber,
-        balance: members.balance,
-        admin: members.admin,
-      })
-      .from(members)
-      .where(eq(members.cardNumber, cardNumber))
-      .limit(1);
+    const member = await this.memberRepository.findByCardNumber(card_number);
 
     if (!member) {
       throw new HTTPException(404, {
-        message: `Member with identifier '${cardNumber}' not found`,
+        message: `Member with identifier '${card_number}' not found`,
       });
     }
 
-    return member;
+    return c.json(member);
   }
 }

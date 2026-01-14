@@ -1,9 +1,7 @@
 import type { Context } from "hono";
 import type { z } from "zod";
 import { HTTPException } from "hono/http-exception";
-import { eq } from "drizzle-orm";
-import { db } from "../config/database.js";
-import { members } from "../db/schema.js";
+import { MemberRepository } from "../repositories/member.repository.js";
 import {
   rechargeReceiptSchema,
   rechargeRequestSchema,
@@ -13,133 +11,81 @@ type RechargeRequest = z.infer<typeof rechargeRequestSchema>;
 type RechargeReceiptDTO = z.infer<typeof rechargeReceiptSchema>;
 
 export class RechargeController {
+  private memberRepository = new MemberRepository();
+
   async createRecharge(c: Context) {
-    const { cardNumber, adminCardNumber, amount } =
-      this.getValidatedBody<RechargeRequest>(c);
+    const { cardNumber, adminCardNumber, amount } = c.req.valid(
+      "json" as never,
+    ) as RechargeRequest;
 
-    const member = await this.getMember(cardNumber);
-
-    const adminMember = await this.validateAdminPermissions(
-      member,
-      adminCardNumber,
-    );
-
-    const newBalance = this.calculateNewBalance(member.balance, amount);
-
-    await this.updateMemberBalanceInTransaction(member.id, newBalance);
-
-    const receipt = this.buildRechargeReceipt(
-      member,
-      adminMember,
-      amount,
-      newBalance,
-    );
-
-    return c.json(receipt, 201);
-  }
-
-  private getValidatedBody<T>(c: Context): T {
-    return c.req.valid("json" as never) as T;
-  }
-
-  private async getMember(cardNumber: number) {
-    const [member] = await db
-      .select()
-      .from(members)
-      .where(eq(members.cardNumber, cardNumber))
-      .limit(1);
-
+    const member = await this.memberRepository.findFullByCardNumber(cardNumber);
     if (!member) {
       throw new HTTPException(404, {
         message: `Member with identifier '${cardNumber}' not found`,
       });
     }
 
-    return member;
-  }
+    let adminMember = null;
 
-  private async validateAdminPermissions(
-    member: any,
-    adminCardNumber?: number,
-  ) {
-    if (member.admin) {
-      return null;
+    if (!member.admin) {
+      if (!adminCardNumber) {
+        throw new HTTPException(403, {
+          message: "Admin card number required for non-admin member recharge",
+        });
+      }
+
+      const admin =
+        await this.memberRepository.findFullByCardNumber(adminCardNumber);
+      if (!admin) {
+        throw new HTTPException(404, {
+          message: `Admin member with identifier '${adminCardNumber}' not found`,
+        });
+      }
+
+      if (!admin.admin) {
+        throw new HTTPException(403, {
+          message: "Provided card number is not an admin",
+        });
+      }
+
+      adminMember = admin;
     }
 
-    if (!adminCardNumber) {
-      throw new HTTPException(403, {
-        message: "Admin card number required for non-admin member recharge",
-      });
-    }
-
-    const [admin] = await db
-      .select()
-      .from(members)
-      .where(eq(members.cardNumber, adminCardNumber))
-      .limit(1);
-
-    if (!admin) {
-      throw new HTTPException(404, {
-        message: `Admin member with identifier '${adminCardNumber}' not found`,
-      });
-    }
-
-    if (!admin.admin) {
-      throw new HTTPException(403, {
-        message: "Provided card number is not an admin",
-      });
-    }
-
-    return admin;
-  }
-
-  private calculateNewBalance(currentBalance: string, amount: number): string {
-    const balance = parseFloat(currentBalance);
+    const balance = parseFloat(member.balance);
     const rechargeAmount = parseFloat(amount.toFixed(2));
-    return (balance + rechargeAmount).toFixed(2);
-  }
+    const newBalance = (balance + rechargeAmount).toFixed(2);
 
-  private async updateMemberBalanceInTransaction(
-    memberId: number,
-    newBalance: string,
-  ): Promise<void> {
-    await db.transaction(async (tx) => {
-      await tx
-        .update(members)
-        .set({ balance: newBalance })
-        .where(eq(members.id, memberId));
-    });
-  }
+    await this.memberRepository.updateBalanceInTransaction(
+      member.id,
+      newBalance,
+    );
 
-  private buildRechargeReceipt(
-    member: any,
-    adminMember: any | null,
-    amount: number,
-    newBalance: string,
-  ): RechargeReceiptDTO {
-    return {
-      success: true,
-      transaction: {
-        date: new Date(),
-        member: {
-          id: member.id,
-          firstName: member.firstName,
-          lastName: member.lastName,
-          cardNumber: member.cardNumber!,
+    return c.json(
+      {
+        success: true,
+        transaction: {
+          date: new Date(),
+          member: {
+            id: member.id,
+            firstName: member.firstName,
+            lastName: member.lastName,
+            cardNumber: member.cardNumber!,
+          },
+          processedBy: adminMember
+            ? {
+                id: adminMember.id,
+                firstName: adminMember.firstName,
+                lastName: adminMember.lastName,
+                cardNumber: adminMember.cardNumber!,
+                isAdmin: adminMember.admin,
+              }
+            : undefined,
+          amount: rechargeAmount.toFixed(2),
+          previousBalance: member.balance,
+          newBalance,
         },
-        processedBy: adminMember
-          ? {
-              id: adminMember.id,
-              firstName: adminMember.firstName,
-              lastName: adminMember.lastName,
-              cardNumber: adminMember.cardNumber!,
-              isAdmin: adminMember.admin,
-            }
-          : undefined,
-        amount: parseFloat(amount.toFixed(2)).toFixed(2),
-        previousBalance: member.balance,
-        newBalance,
-      },
-    };
+      } satisfies RechargeReceiptDTO,
+      201,
+    );
   }
 }
