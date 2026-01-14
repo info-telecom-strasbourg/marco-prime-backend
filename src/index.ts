@@ -5,10 +5,12 @@ import { customLogger } from "./config/logger.js";
 import { router } from "./config/router.js";
 import { authMiddleware } from "./middlewares/auth.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
+import { limiter } from "./middlewares/rate-limiter.middleware.js";
 
 export const app = new Hono()
   .onError(errorHandler)
   .use("*", logger(customLogger))
+  .use("*", limiter)
   .get("/api/v1/health", (c) =>
     c.json({
       status: "ok",
