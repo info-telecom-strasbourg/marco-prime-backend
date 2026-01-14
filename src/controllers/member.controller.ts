@@ -1,9 +1,9 @@
 import type { Context } from "hono";
 import type { z } from "zod";
+import { HTTPException } from "hono/http-exception";
 import { eq } from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members } from "../db/schema.js";
-import { NotFoundError } from "../errors/index.js";
 import { cardNumberParamSchema } from "../validators/members.validator.js";
 
 type MemberParamRequest = z.infer<typeof cardNumberParamSchema>;
@@ -36,7 +36,9 @@ export class MemberController {
       .limit(1);
 
     if (!member) {
-      throw new NotFoundError("Member", cardNumber);
+      throw new HTTPException(404, {
+        message: `Member with identifier '${cardNumber}' not found`,
+      });
     }
 
     return member;

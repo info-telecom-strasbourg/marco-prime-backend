@@ -1,13 +1,9 @@
 import type { Context } from "hono";
 import type { z } from "zod";
+import { HTTPException } from "hono/http-exception";
 import { eq } from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members, orders, products } from "../db/schema.js";
-import {
-  InsufficientBalanceError,
-  NotFoundError,
-  ProductUnavailableError,
-} from "../errors/index.js";
 import {
   purchaseReceiptSchema,
   purchaseRequestSchema,
@@ -63,7 +59,9 @@ export class PurchaseController {
       .limit(1);
 
     if (!product) {
-      throw new NotFoundError("Product", productId);
+      throw new HTTPException(404, {
+        message: `Product with identifier '${productId}' not found`,
+      });
     }
 
     return product;
@@ -71,7 +69,9 @@ export class PurchaseController {
 
   private validateProductAvailability(product: any): void {
     if (!product.available) {
-      throw new ProductUnavailableError(product.id);
+      throw new HTTPException(400, {
+        message: `Product with ID ${product.id} is not available`,
+      });
     }
   }
 
@@ -83,7 +83,9 @@ export class PurchaseController {
       .limit(1);
 
     if (!member) {
-      throw new NotFoundError("Member", cardNumber);
+      throw new HTTPException(404, {
+        message: `Member with identifier '${cardNumber}' not found`,
+      });
     }
 
     return member;
@@ -99,7 +101,18 @@ export class PurchaseController {
     totalPrice: string,
   ): void {
     if (parseFloat(currentBalance) < parseFloat(totalPrice)) {
-      throw new InsufficientBalanceError(totalPrice, currentBalance);
+      const errorResponse = new Response(
+        JSON.stringify({
+          error: "Insufficient balance",
+          required: totalPrice,
+          available: currentBalance,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+      throw new HTTPException(400, { res: errorResponse });
     }
   }
 

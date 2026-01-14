@@ -1,13 +1,9 @@
 import type { Context } from "hono";
 import type { z } from "zod";
+import { HTTPException } from "hono/http-exception";
 import { eq } from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members } from "../db/schema.js";
-import {
-  AdminAuthorizationError,
-  ForbiddenError,
-  NotFoundError,
-} from "../errors/index.js";
 import {
   rechargeReceiptSchema,
   rechargeRequestSchema,
@@ -54,7 +50,9 @@ export class RechargeController {
       .limit(1);
 
     if (!member) {
-      throw new NotFoundError("Member", cardNumber);
+      throw new HTTPException(404, {
+        message: `Member with identifier '${cardNumber}' not found`,
+      });
     }
 
     return member;
@@ -69,7 +67,9 @@ export class RechargeController {
     }
 
     if (!adminCardNumber) {
-      throw new AdminAuthorizationError();
+      throw new HTTPException(403, {
+        message: "Admin card number required for non-admin member recharge",
+      });
     }
 
     const [admin] = await db
@@ -79,11 +79,15 @@ export class RechargeController {
       .limit(1);
 
     if (!admin) {
-      throw new NotFoundError("Admin member", adminCardNumber);
+      throw new HTTPException(404, {
+        message: `Admin member with identifier '${adminCardNumber}' not found`,
+      });
     }
 
     if (!admin.admin) {
-      throw new ForbiddenError("Provided card number is not an admin");
+      throw new HTTPException(403, {
+        message: "Provided card number is not an admin",
+      });
     }
 
     return admin;
