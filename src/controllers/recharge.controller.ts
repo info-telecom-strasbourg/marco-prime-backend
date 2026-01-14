@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import type { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members } from "../db/schema.js";
@@ -7,16 +8,18 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../errors/index.js";
-import type { RechargeReceiptDTO } from "../types/index.js";
+import {
+  rechargeReceiptSchema,
+  rechargeRequestSchema,
+} from "../validators/recharge.validator.js";
+
+type RechargeRequest = z.infer<typeof rechargeRequestSchema>;
+type RechargeReceiptDTO = z.infer<typeof rechargeReceiptSchema>;
 
 export class RechargeController {
   async createRecharge(c: Context) {
-    const body = c.req.valid("json" as never);
-    const { cardNumber, adminCardNumber, amount } = body as {
-      cardNumber: number;
-      adminCardNumber?: number;
-      amount: number;
-    };
+    const { cardNumber, adminCardNumber, amount } =
+      this.getValidatedBody<RechargeRequest>(c);
 
     const member = await this.getMember(cardNumber);
 
@@ -27,11 +30,20 @@ export class RechargeController {
 
     const newBalance = this.calculateNewBalance(member.balance, amount);
 
-    await this.executeRechargeTransaction(member.id, newBalance);
+    await this.updateMemberBalanceInTransaction(member.id, newBalance);
 
-    const receipt = this.buildReceipt(member, adminMember, amount, newBalance);
+    const receipt = this.buildRechargeReceipt(
+      member,
+      adminMember,
+      amount,
+      newBalance,
+    );
 
     return c.json(receipt, 201);
+  }
+
+  private getValidatedBody<T>(c: Context): T {
+    return c.req.valid("json" as never) as T;
   }
 
   private async getMember(cardNumber: number) {
@@ -83,10 +95,10 @@ export class RechargeController {
     return (balance + rechargeAmount).toFixed(2);
   }
 
-  private async executeRechargeTransaction(
+  private async updateMemberBalanceInTransaction(
     memberId: number,
     newBalance: string,
-  ) {
+  ): Promise<void> {
     await db.transaction(async (tx) => {
       await tx
         .update(members)
@@ -95,7 +107,7 @@ export class RechargeController {
     });
   }
 
-  private buildReceipt(
+  private buildRechargeReceipt(
     member: any,
     adminMember: any | null,
     amount: number,

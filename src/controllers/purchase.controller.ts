@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import type { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members, orders, products } from "../db/schema.js";
@@ -7,37 +8,51 @@ import {
   NotFoundError,
   ProductUnavailableError,
 } from "../errors/index.js";
-import type { PurchaseReceiptDTO } from "../types/index.js";
+import {
+  purchaseReceiptSchema,
+  purchaseRequestSchema,
+} from "../validators/purchase.validator.js";
+
+type PurchaseRequest = z.infer<typeof purchaseRequestSchema>;
+type PurchaseReceiptDTO = z.infer<typeof purchaseReceiptSchema>;
 
 export class PurchaseController {
   async createPurchase(c: Context) {
-    const body = c.req.valid("json" as never);
-    const { productId, cardNumber, amount } = body as {
-      productId: number;
-      cardNumber: number;
-      amount: number;
-    };
+    const { productId, cardNumber, amount } =
+      this.getValidatedBody<PurchaseRequest>(c);
 
     const product = await this.getProduct(productId);
     this.validateProductAvailability(product);
 
     const member = await this.getMember(cardNumber);
 
-    const { totalPrice, newBalance } = this.calculatePurchase(
-      product.price,
+    const totalPrice = this.calculateTotalPrice(product.price, amount);
+    this.validateSufficientBalance(member.balance, totalPrice);
+    const newBalance = this.calculateNewBalance(member.balance, totalPrice);
+
+    const { orderId, orderDate } = await this.createOrderInTransaction(
+      product,
+      member,
       amount,
-      member.balance,
+      newBalance,
     );
 
-    const receipt = await this.executePurchaseTransaction(
+    const receipt = this.buildPurchaseReceipt(
+      orderId,
+      orderDate,
       product,
       member,
       amount,
       totalPrice,
+      member.balance,
       newBalance,
     );
 
     return c.json(receipt, 201);
+  }
+
+  private getValidatedBody<T>(c: Context): T {
+    return c.req.valid("json" as never) as T;
   }
 
   private async getProduct(productId: number) {
@@ -54,7 +69,7 @@ export class PurchaseController {
     return product;
   }
 
-  private validateProductAvailability(product: any) {
+  private validateProductAvailability(product: any): void {
     if (!product.available) {
       throw new ProductUnavailableError(product.id);
     }
@@ -74,31 +89,33 @@ export class PurchaseController {
     return member;
   }
 
-  private calculatePurchase(
-    productPrice: string,
-    amount: number,
-    memberBalance: string,
-  ) {
+  private calculateTotalPrice(productPrice: string, amount: number): string {
     const unitPrice = parseFloat(productPrice);
-    const totalPrice = (unitPrice * amount).toFixed(2);
-    const currentBalance = parseFloat(memberBalance);
-
-    if (currentBalance < parseFloat(totalPrice)) {
-      throw new InsufficientBalanceError(totalPrice, memberBalance);
-    }
-
-    const newBalance = (currentBalance - parseFloat(totalPrice)).toFixed(2);
-
-    return { totalPrice, newBalance };
+    return (unitPrice * amount).toFixed(2);
   }
 
-  private async executePurchaseTransaction(
+  private validateSufficientBalance(
+    currentBalance: string,
+    totalPrice: string,
+  ): void {
+    if (parseFloat(currentBalance) < parseFloat(totalPrice)) {
+      throw new InsufficientBalanceError(totalPrice, currentBalance);
+    }
+  }
+
+  private calculateNewBalance(
+    currentBalance: string,
+    totalPrice: string,
+  ): string {
+    return (parseFloat(currentBalance) - parseFloat(totalPrice)).toFixed(2);
+  }
+
+  private async createOrderInTransaction(
     product: any,
     member: any,
     amount: number,
-    totalPrice: string,
     newBalance: string,
-  ): Promise<PurchaseReceiptDTO> {
+  ): Promise<{ orderId: number; orderDate: Date }> {
     return await db.transaction(async (tx) => {
       const [order] = await tx
         .insert(orders)
@@ -121,29 +138,42 @@ export class PurchaseController {
         .where(eq(orders.id, order.id))
         .limit(1);
 
-      return {
-        success: true,
-        transaction: {
-          orderId: order.id,
-          date: createdOrder.date,
-          product: {
-            id: product.id,
-            name: product.name,
-            title: product.title,
-            price: product.price,
-          },
-          member: {
-            id: member.id,
-            firstName: member.firstName,
-            lastName: member.lastName,
-            cardNumber: member.cardNumber!,
-          },
-          amount,
-          totalPrice,
-          previousBalance: member.balance,
-          newBalance,
-        },
-      };
+      return { orderId: order.id, orderDate: createdOrder.date };
     });
+  }
+
+  private buildPurchaseReceipt(
+    orderId: number,
+    orderDate: Date,
+    product: any,
+    member: any,
+    amount: number,
+    totalPrice: string,
+    previousBalance: string,
+    newBalance: string,
+  ): PurchaseReceiptDTO {
+    return {
+      success: true,
+      transaction: {
+        orderId,
+        date: orderDate,
+        product: {
+          id: product.id,
+          name: product.name,
+          title: product.title,
+          price: product.price,
+        },
+        member: {
+          id: member.id,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          cardNumber: member.cardNumber!,
+        },
+        amount,
+        totalPrice,
+        previousBalance,
+        newBalance,
+      },
+    };
   }
 }

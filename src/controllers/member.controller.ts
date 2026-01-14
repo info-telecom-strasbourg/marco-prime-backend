@@ -1,14 +1,27 @@
 import type { Context } from "hono";
+import type { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members } from "../db/schema.js";
 import { NotFoundError } from "../errors/index.js";
+import { cardNumberParamSchema } from "../validators/members.validator.js";
+
+type MemberParamRequest = z.infer<typeof cardNumberParamSchema>;
 
 export class MemberController {
   async getMemberByCardNumber(c: Context) {
-    const params = c.req.valid("param" as never);
-    const { card_number } = params as { card_number: number };
+    const { card_number } = this.getValidatedParams<MemberParamRequest>(c);
 
+    const member = await this.findMemberByCardNumber(card_number);
+
+    return c.json(member);
+  }
+
+  private getValidatedParams<T>(c: Context): T {
+    return c.req.valid("param" as never) as T;
+  }
+
+  private async findMemberByCardNumber(cardNumber: number) {
     const [member] = await db
       .select({
         id: members.id,
@@ -19,13 +32,13 @@ export class MemberController {
         admin: members.admin,
       })
       .from(members)
-      .where(eq(members.cardNumber, card_number))
+      .where(eq(members.cardNumber, cardNumber))
       .limit(1);
 
     if (!member) {
-      throw new NotFoundError("Member", card_number);
+      throw new NotFoundError("Member", cardNumber);
     }
 
-    return c.json(member);
+    return member;
   }
 }
