@@ -8,6 +8,13 @@
       "when": 1770415101920,
       "tag": "0000_worried_warbird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1770416819949,
+      "tag": "0001_icy_sunspot",
+      "breakpoints": true
     }
   ]
 }

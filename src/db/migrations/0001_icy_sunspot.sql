@@ -1,0 +1,1 @@
+ALTER TABLE `members` MODIFY COLUMN `email` varchar(50) NOT NULL;
