@@ -1,6 +1,6 @@
 import { pino } from "pino";
 import pretty from "pino-pretty";
-import { env } from "@/core/config/env.config.ts";
+import { env } from "@/lib/config/env.config.ts";
 
 export const pinoConfig = pino(
   {

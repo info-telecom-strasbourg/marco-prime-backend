@@ -1,7 +1,7 @@
 import type { ErrorHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { env } from "../config/env.config.ts";
-import { HTTPStatusCodes } from "../helpers/http/index.ts";
+import { env } from "@/lib/config/env.config.ts";
+import { HTTPStatusCodes } from "@/lib/helpers/http/index.ts";
 
 export const errorHandlerMiddleware: ErrorHandler = (err, c) => {
   const currentStatus =

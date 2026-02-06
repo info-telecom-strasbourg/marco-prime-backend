@@ -1,5 +1,5 @@
 import { defineConfig } from "drizzle-kit";
-import { env } from "@/core/config/env.config.ts";
+import { env } from "@/lib/config/env.config.ts";
 
 export default defineConfig({
   out: "./src/db/migrations",

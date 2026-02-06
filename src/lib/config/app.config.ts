@@ -4,9 +4,9 @@ import {
   type RouteHandler,
 } from "@hono/zod-openapi";
 import type { PinoLogger } from "hono-pino";
-import { errorHandlerMiddleware } from "../middlewares/error-handler.middleware.ts";
-import { notFoundMiddleware } from "../middlewares/not-found.middleware.ts";
-import { pinoMiddleware } from "../middlewares/pino.middleware.ts";
+import { errorHandlerMiddleware } from "@/middlewares/error-handler.middleware.ts";
+import { notFoundMiddleware } from "@/middlewares/not-found.middleware.ts";
+import { pinoMiddleware } from "@/middlewares/pino.middleware.ts";
 
 export type AppBindings = {
   Variables: {

@@ -1,5 +1,8 @@
 import type { NotFoundHandler } from "hono";
-import { HTTPStatusCodes, HTTPStatusPhrases } from "../helpers/http/index.ts";
+import {
+  HTTPStatusCodes,
+  HTTPStatusPhrases,
+} from "@/lib/helpers/http/index.ts";
 
 export const notFoundMiddleware: NotFoundHandler = (c) => {
   return c.json(
